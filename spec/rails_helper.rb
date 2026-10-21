@@ -72,6 +72,9 @@ RSpec.configure do |config|
   config.include AuthenticationHelper::FeatureHelper, type: :feature
   config.include AuthenticationHelper::RequestHelper, type: :request
 
+  config.before(:suite) { OmniAuth.config.test_mode = true }
+  config.after { OmniAuth.config.mock_auth.delete(:keycloak) }
+
   config.filter_rails_from_backtrace!
   config.filter_gems_from_backtrace \
     "bullet",

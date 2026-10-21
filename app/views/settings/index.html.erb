@@ -58,32 +58,6 @@
     </section>
 
     <section>
-      <h2>Security Settings</h2>
-
-      <div class="labelled_grid">
-        <%= f.label :current_password, "Current Password" %>
-        <%= f.password_field :current_password, name: "current_password", autocomplete: "off" %>
-
-        <%= f.label :password, "New Password" %>
-        <%= f.password_field :password, autocomplete: "off" %>
-
-        <%= f.label :password_confirmation, "Confirm Password" %>
-        <%= f.password_field :password_confirmation, autocomplete: "off" %>
-
-        <%= f.label :twofa, "Two-Factor Auth" %>
-        <span>
-        <% if @edit_user.totp_secret.present? %>
-          <span style="color: green; font-weight: bold;">
-            Enabled
-          </span> (<a href="/settings/2fa">Disable</a>)
-        <% else %>
-          Disabled (<a href="/settings/2fa">Enroll</a>)
-        <% end %>
-        </span>
-      </div>
-    </section>
-
-    <section>
       <h2>Comment Reply Notification Settings</h2>
 
       <div class="labelled_grid">
@@ -220,6 +194,35 @@
 </section>
 
 <section>
+  <h2 name="login">Login</h2>
+
+  <p>
+  You log in through an identity provider, which also handles your password and two-factor
+  authentication. Removing a login or deactivating your account asks you to log in again first.
+  </p>
+
+  <div class="labelled_grid">
+    <% @user.identities.each do |identity| %>
+      <%= label_tag "identity_#{identity.id}", identity.provider_label %>
+      <span>
+        <%= identity.email.presence || "linked" %>
+        <% if identity.last_login_at %>
+          <span class="hint">last login <%= how_long_ago_label(identity.last_login_at) %></span>
+        <% end %>
+        <% if @user.identities.size > 1 %>
+          <%= link_post "Unlink", unlink_identity_path(identity), confirm: "Unlink this login?" %>
+        <% end %>
+      </span>
+    <% end %>
+  </div>
+
+  <% unlinked = OidcProvider.all.reject { |p| @user.identities.map(&:provider).include?(p.name) } %>
+  <% if unlinked.any? %>
+    <%= render "login/provider_buttons", providers: unlinked, verb: "Link" %>
+  <% end %>
+</section>
+
+<section>
   <h2 name="external">External Accounts</h2>
 
   <div class="labelled_grid">
@@ -296,11 +299,11 @@
   <%= form_with model: @edit_user, url: deactivate_path, method: :post, id: 'deactivate_user', namespace: 'deactivate_user' do |f| %>
     <h2>Deactivate Account</h2>
     <p>
-    To deactivate your account, verify your current password below.
+    To deactivate your account, check the box below. You may be asked to log in again first.
     </p>
     <ul>
       <li>Your profile will show that you deactivated your account.</li>
-      <li>You will not be able to log in, but you can reset your password if you want to reactivate your account.</li>
+      <li>Logging in again later will reactivate your account.</li>
       <li>Your username will remain reserved and will not be available for any other account.</li>
       <li>Your private messages will be deleted (recipients will keep their copies of messages).</li>
       <li>Your submitted stories will not be deleted.</li>
@@ -312,8 +315,6 @@
     </ul>
 
     <div class="labelled_grid">
-      <%= f.label :password, "Verify Password" %>
-      <%= f.password_field :password, required: true, autocomplete: "off" %>
       <%= f.label :i_am_sure, "I am sure", class: "for_checkbox" %>
       <span><%= f.check_box :i_am_sure, required: true %></span>
       <%= f.label :disown, "Disown stories/comments", :class => "for_checkbox" %>

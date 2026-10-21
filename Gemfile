@@ -48,6 +48,9 @@ gem "stackprof"
 gem "builder" # for rss
 gem "faker" # for factory data and /cabinet
 gem "oauth" # for linking accounts
+gem "omniauth" # for OIDC login
+gem "omniauth_openid_connect"
+gem "omniauth-rails_csrf_protection"
 gem "mail" # for parsing incoming mail
 gem "sitemap_generator" # for better search engine indexing
 gem "svg-graph", require: "SVG/Graph/TimeSeries" # for charting, note workaround in lib/time_series.rb

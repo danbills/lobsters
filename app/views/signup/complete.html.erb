@@ -1,0 +1,45 @@
+<%= form_with model: @new_user, url: signup_complete_path, method: :post do |f| %>
+  <p>
+  You're almost done. Choose a username, it can be changed later.
+  </p>
+
+  <%= errors_for(@new_user) %>
+
+  <div class="labelled_grid">
+    <% if @invitation %>
+      <%= f.label :invitation, "Invited By" %>
+      <%= link_to @invitation.user.username, user_path(@invitation.user), target: '_blank' %>
+    <% end %>
+
+    <%= f.label :username, "Username" %>
+    <div>
+      <%= f.text_field :username, required: true, autocapitalize: :off, autocorrect: :off %>
+      <div class="hint">
+        <tt><%= Username.username_regex_s %></tt>
+      </div>
+    </div>
+
+    <%= f.label :email, "E-mail Address" %>
+    <div>
+      <%= @new_user.email.presence || "(none)" %>
+      <div class="hint">
+        From your identity provider.
+        <a href="http://www.gravatar.com/" target="_blank">Gravatar</a>'ized
+      </div>
+    </div>
+
+    <p>
+    Want to tell us about yourself?  It's optional, but it will be visible in
+    your public profile and can be changed at any time.
+    </p>
+
+    <%= f.label :about, "About" %>
+    <div>
+      <%= f.text_area :about %>
+
+      <%= render :partial => "global/markdownhelp" %>
+    </div>
+  </div>
+
+  <%= f.submit "Signup" %>
+<% end %>

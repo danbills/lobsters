@@ -9,7 +9,7 @@ describe SettingsController do
       new_username = "#{user.username}0"
       user.usernames.touch_all(:created_at, time: 2.years.ago) # needed to pass User#validate_username_timeouts
       stub_login_as user
-      expect { post :update, params: {user: {password: "", username: new_username}} }.to change(Moderation, :count).by(1)
+      expect { post :update, params: {user: {username: new_username}} }.to change(Moderation, :count).by(1)
       expect(response.status).to eq(200)
       user.reload
       expect(user.username).to eq(new_username)

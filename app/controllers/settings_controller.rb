@@ -2,8 +2,7 @@
 
 class SettingsController < ApplicationController
   before_action :require_logged_in_user, :show_title_h1
-
-  TOTP_SESSION_TIMEOUT = (60 * 15)
+  before_action :require_recent_auth, only: [:deactivate, :unlink_identity]
 
   def index
     @title = "Settings"
@@ -15,11 +14,6 @@ class SettingsController < ApplicationController
       flash[:error] = 'You did not check the "I am sure" checkbox.'
       return redirect_to settings_path
     end
-    unless @user.try(:authenticate, params[:user][:password].to_s)
-      flash[:error] = "Given password doesn't match account."
-      return redirect_to settings_path
-    end
-
     disown = params[:user][:disown] == "1"
     @user.delete!
     InactiveUser.disown_all_by_author!(@user) if disown
@@ -44,110 +38,31 @@ class SettingsController < ApplicationController
   def update
     @edit_user = @user.clone
 
-    if params[:user][:password].empty? ||
-        @user.authenticate(params[:current_password].to_s)
-      @edit_user.roll_session_token if params[:user][:password]
-      if @edit_user.update(user_params)
-        if @edit_user.username_previously_changed?
-          Username.rename!(
-            user: @edit_user,
-            from: @edit_user.username_previously_was,
-            to: @edit_user.username,
-            by: @user
-          )
-        end
-        session[:u] = @user.session_token if params[:user][:password]
-        flash.now[:success] = "Successfully updated settings."
-        @user = @edit_user
+    if @edit_user.update(user_params)
+      if @edit_user.username_previously_changed?
+        Username.rename!(
+          user: @edit_user,
+          from: @edit_user.username_previously_was,
+          to: @edit_user.username,
+          by: @user
+        )
       end
-    else
-      flash[:error] = "Your current password was not entered correctly."
+      flash.now[:success] = "Successfully updated settings."
+      @user = @edit_user
     end
 
     render action: "index"
   end
 
-  def twofa
-    @title = "Two-Factor Authentication"
-  end
-
-  def twofa_auth
-    if @user.authenticate(params[:user][:password].to_s)
-      session[:last_authed] = Time.now.to_i
-      session.delete(:totp_secret)
-
-      if @user.has_2fa?
-        @user.disable_2fa!
-        flash[:success] = "Two-Factor Authentication has been disabled."
-        redirect_to "/settings"
-      else
-        redirect_to twofa_enroll_url
-      end
+  def unlink_identity
+    identity = @user.identities.find(params[:id])
+    if @user.identities.count <= 1
+      flash[:error] = "You can't unlink your only login, you'd be locked out."
     else
-      flash[:error] = "Your password was not correct."
-      redirect_to twofa_url
+      identity.destroy!
+      flash[:success] = "Unlinked your #{identity.provider_label} login."
     end
-  end
-
-  def twofa_enroll
-    @title = "Two-Factor Authentication"
-
-    if (Time.now.to_i - session[:last_authed].to_i) > TOTP_SESSION_TIMEOUT
-      flash[:error] = "Your enrollment period timed out."
-      return redirect_to twofa_url
-    end
-
-    if !session[:totp_secret]
-      session[:totp_secret] = ROTP::Base32.random
-    end
-
-    totp = ROTP::TOTP.new(session[:totp_secret], issuer: Rails.application.name)
-    totp_url = totp.provisioning_uri(@user.email)
-
-    qrcode = RQRCode::QRCode.new(totp_url)
-    qr = qrcode.as_svg(offset: 0,
-      fill: "ffffff",
-      color: "000",
-      module_size: 5,
-      shape_rendering: "crispEdges")
-
-    @qr_secret = totp.secret
-    @qr_svg = "<a href=\"#{totp_url}\">#{qr}</a>"
-  end
-
-  def twofa_verify
-    @title = "Two-Factor Authentication"
-
-    if ((Time.now.to_i - session[:last_authed].to_i) > TOTP_SESSION_TIMEOUT) ||
-        !session[:totp_secret]
-      flash[:error] = "Your enrollment period timed out."
-      redirect_to twofa_url
-    end
-  end
-
-  def twofa_update
-    if ((Time.now.to_i - session[:last_authed].to_i) > TOTP_SESSION_TIMEOUT) ||
-        !session[:totp_secret]
-      flash[:error] = "Your enrollment period timed out."
-      return redirect_to twofa_url
-    end
-
-    @user.totp_secret = session[:totp_secret]
-    if @user.authenticate_totp(params[:totp_code])
-      # re-roll, just in case
-      @user.session_token = nil
-      @user.save!
-
-      session[:u] = @user.session_token
-
-      flash[:success] = "Two-Factor Authentication has been enabled on your account."
-      session.delete(:totp_secret)
-      redirect_to "/settings"
-    else
-      flash[:error] = "Your TOTP code was invalid, please verify the " \
-        "current code in your TOTP application."
-      redirect_to twofa_verify_url
-    end
+    redirect_to settings_path
   end
 
   # external services
@@ -289,7 +204,7 @@ class SettingsController < ApplicationController
 
   def user_params
     params.require(:user).permit(
-      :username, :email, :password, :password_confirmation, :homepage, :about, :avatar_source,
+      :username, :homepage, :about, :avatar_source,
       :email_replies, :email_messages, :email_mentions, :inbox_mentions,
       :pushover_replies, :pushover_messages, :pushover_mentions,
       :mailing_list_mode, :show_email, :show_avatars, :show_story_previews,

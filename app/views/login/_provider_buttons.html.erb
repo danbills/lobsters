@@ -1,0 +1,8 @@
+<%# locals: (providers:, verb: "Log in with", params: {}) -%>
+<% if providers.empty? %>
+  <p>No login providers are configured. An admin needs to add one under <tt>oidc.providers</tt> in the Rails credentials.</p>
+<% else %>
+  <% providers.each do |provider| %>
+    <%= button_to "#{verb} #{provider.label}", provider.start_path, method: :post, params: params, form_class: "oidc_login" %>
+  <% end %>
+<% end %>

@@ -71,4 +71,18 @@ Rails.application.configure do
   config.solid_queue.connects_to = {database: {writing: :queue}}
 
   config.active_storage.service = :local
+
+  # a fixed OIDC provider so specs don't depend on credentials, see spec/support/authentication_helper.rb
+  config.x.oidc = {
+    base_url: "http://www.example.com",
+    providers: {
+      keycloak: {
+        label: "Keycloak",
+        issuer: "https://idp.example.com/realms/test",
+        client_id: "lobsters",
+        client_secret: "secret",
+        trust_email_verified: true
+      }
+    }
+  }
 end

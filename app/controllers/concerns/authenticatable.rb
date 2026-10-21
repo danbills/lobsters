@@ -61,6 +61,17 @@ module Authenticatable
     end
   end
 
+  RECENT_AUTH_WINDOW = 10.minutes
+
+  # For sensitive actions, require that the user logged in at their identity provider recently.
+  def require_recent_auth
+    return true if Time.now.to_i - session[:authed_at].to_i < RECENT_AUTH_WINDOW
+
+    session[:after_reauth] = "/settings"
+    flash[:notice] = "Please confirm it's you, then try again."
+    redirect_to reauth_path
+  end
+
   def require_logged_in_user_or_400
     if @user
       true

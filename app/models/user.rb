@@ -44,6 +44,7 @@ class User < ApplicationRecord
     inverse_of: :user,
     dependent: :restrict_with_exception
   has_many :usernames, dependent: :destroy # tests fail if :restrict_with_exception
+  has_many :identities, class_name: "UserIdentity", dependent: :destroy
   has_many :votes, dependent: :restrict_with_exception
   has_many :voted_stories, -> { where("votes.comment_id" => nil) },
     through: :votes,
@@ -476,11 +477,10 @@ class User < ApplicationRecord
     true
   end
 
-  def initiate_password_reset_for_ip(ip)
-    self.password_reset_token = "#{Time.current.to_i}-#{Utils.random_str(30)}"
-    save!
-
-    PasswordResetMailer.password_reset_link(self, ip).deliver_now
+  # Users log in through an OIDC provider, so the password is an unguessable placeholder that
+  # satisfies has_secure_password.
+  def set_random_password
+    self.password = self.password_confirmation = SecureRandom.base58(64)
   end
 
   def has_2fa?

@@ -22,7 +22,7 @@ threads threads_count, threads_count
 
 # listen to all hosts in dev https://github.com/lobsters/lobsters/pull/2191
 if ENV.fetch("RAILS_ENV") == "development"
-  bind "tcp://0.0.0.0:3000"
+  bind "tcp://0.0.0.0:#{ENV.fetch("PORT", 3000)}"
 end
 
 # Hatchbox's socket and app service both lock port to 9000 in prod, overriding this setting, so we

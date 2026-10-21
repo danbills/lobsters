@@ -49,21 +49,17 @@ Rails.application.routes.draw do
   get "/replies/unread/page/:page", to: redirect("/inbox/unread")
 
   get "/login" => "login#index"
-  post "/login" => "login#login"
   post "/logout" => "login#logout"
-  get "/login/2fa" => "login#twofa"
-  post "/login/2fa_verify" => "login#twofa_verify", :as => "twofa_login"
+  get "/login/reauth" => "login#reauth", :as => "reauth"
+
+  # POST /auth/:provider is handled by the OmniAuth middleware, see config/initializers/omniauth.rb
+  match "/auth/:provider/callback" => "oidc#callback", :via => [:get, :post], :as => "oidc_callback"
+  get "/auth/failure" => "oidc#failure"
 
   get "/signup" => "signup#index"
-  post "/signup" => "signup#signup"
   get "/signup/invite" => "signup#invite"
-
-  get "/login/forgot_password" => "login#forgot_password",
-    :as => "forgot_password"
-  post "/login/reset_password" => "login#reset_password",
-    :as => "reset_password"
-  match "/login/set_new_password" => "login#set_new_password",
-    :as => "set_new_password", :via => [:get, :post]
+  get "/signup/complete" => "signup#complete", :as => "signup_complete"
+  post "/signup/complete" => "signup#create"
 
   get "/t/:tag" => "home#single_tag", :as => "tag", :constraints => {tag: /[^,.\/]+/}
   get "/t/:tag/page/:page" => "home#single_tag", :constraints => {tag: /[^,.\/]+/}
@@ -179,14 +175,7 @@ Rails.application.routes.draw do
   post "/settings" => "settings#update"
   post "/settings/update_avatar_source" => "settings#update_avatar_source", :as => "update_avatar_source"
   post "/settings/deactivate" => "settings#deactivate", :as => "deactivate"
-  get "/settings/2fa" => "settings#twofa", :as => "twofa"
-  post "/settings/2fa_auth" => "settings#twofa_auth", :as => "twofa_auth"
-  get "/settings/2fa_enroll" => "settings#twofa_enroll",
-    :as => "twofa_enroll"
-  get "/settings/2fa_verify" => "settings#twofa_verify",
-    :as => "twofa_verify"
-  post "/settings/2fa_update" => "settings#twofa_update",
-    :as => "twofa_update"
+  post "/settings/identities/:id/unlink" => "settings#unlink_identity", :as => "unlink_identity"
   post "/settings/pushover_auth" => "settings#pushover_auth"
   get "/settings/pushover_callback" => "settings#pushover_callback"
   get "/settings/mastodon_authentication" => "settings#mastodon_authentication"

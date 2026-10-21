@@ -41,7 +41,7 @@ end
 # at some point they'll proceed to testing credentials
 Rack::Attack.throttle("login", limit: 4, period: 60) do |request|
   request.ip if request.post? &&
-    request.path.start_with?("/login", "/login/set_new_password")
+    request.path.start_with?("/auth/", "/signup/complete")
 end
 
 Rack::Attack.throttle("log4j probe", limit: 1, period: 1.day.to_i) do |request|

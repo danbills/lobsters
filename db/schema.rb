@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_09_015037) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_20_000000) do
   create_table "action_mailbox_inbound_emails", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.string "message_checksum", null: false
@@ -366,14 +366,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_09_015037) do
     t.index ["user_id", "story_id"], name: "index_saved_stories_on_user_id_and_story_id", unique: true
   end
 
-# Could not dump table "sqlite_stat1" because of following StandardError
-#   Unknown type '' for column 'idx'
-
-
-# Could not dump table "sqlite_stat4" because of following StandardError
-#   Unknown type '' for column 'idx'
-
-
   create_table "stories", force: :cascade do |t|
     t.integer "comments_count", default: 0, null: false
     t.datetime "created_at", precision: nil
@@ -476,6 +468,19 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_09_015037) do
     t.index ["category_id"], name: "index_tags_on_category_id"
     t.index ["tag"], name: "tag", unique: true
     t.index ["token"], name: "index_tags_on_token", unique: true
+  end
+
+  create_table "user_identities", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.string "email", limit: 100, collation: "NOCASE"
+    t.string "issuer", null: false
+    t.datetime "last_login_at"
+    t.string "provider", null: false
+    t.string "subject", null: false
+    t.datetime "updated_at", null: false
+    t.integer "user_id", null: false
+    t.index ["issuer", "subject"], name: "index_user_identities_on_issuer_and_subject", unique: true
+    t.index ["user_id"], name: "index_user_identities_on_user_id"
   end
 
   create_table "usernames", force: :cascade do |t|
@@ -597,6 +602,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_09_015037) do
   add_foreign_key "taggings", "stories"
   add_foreign_key "taggings", "tags", on_update: :cascade, on_delete: :cascade
   add_foreign_key "tags", "categories"
+  add_foreign_key "user_identities", "users"
   add_foreign_key "usernames", "users"
   add_foreign_key "users", "users", column: "banned_by_user_id"
   add_foreign_key "users", "users", column: "disabled_invite_by_user_id"
