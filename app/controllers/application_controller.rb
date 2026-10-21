@@ -122,6 +122,7 @@ class ApplicationController < ActionController::Base
 
     if Rails.application.config.telebugs
       Telebugs.context "request", {
+        request_token: request.request_id,
         requested_path: @requested_path,
         original_fullpath: request.original_fullpath,
         query_parameters: request.query_parameters, # protected by filter_parameters
@@ -138,14 +139,17 @@ class ApplicationController < ActionController::Base
 
     if (story.is_gone? || story.merged_story_id || story.new_record?) && story.short_id.present? && page_cache_directory.present?
       # rm the story's whole directory to catch files with old title slugs
-      FileUtils.rm_rf File.join(page_cache_directory, "s", story.short_id)
+      story_dir = File.join(page_cache_directory, "s", story.short_id)
+      FileUtils.rm_rf [story_dir, *Dir.glob("#{story_dir}.*")]
     else
+      path = Routes.title_path(story)
+      return unless is_moderator || Rails.cache.write("refill_story_page_cache:#{path}", true, unless_exist: true, expires_in: 2.minutes)
+
       CachePageJob
         .set(
-          queue: (is_moderator || story.created_at&.after?(1.month.ago)) ? :default : :refill_story_pages,
-          wait: is_moderator ? 0 : 2.minutes
+          queue: (is_moderator || story.created_at&.after?(1.month.ago)) ? :default : :refill_story_pages
         )
-        .perform_later(Routes.title_path(story))
+        .perform_later(path)
     end
   end
 

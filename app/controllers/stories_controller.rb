@@ -12,7 +12,7 @@ class StoriesController < ApplicationController
   before_action :require_logged_in_user_or_400,
     only: [:upvote, :flag, :unvote, :hide, :unhide, :preview, :save, :unsave]
   before_action :require_logged_in_user,
-    only: [:destroy, :create, :edit, :fetch_url_attributes, :new]
+    only: [:destroy, :create, :edit, :fetch_url_attributes, :new, :undelete, :update]
   before_action :verify_user_can_submit_stories, only: [:new, :create]
   before_action :find_user_story, only: [:destroy, :edit, :undelete, :update]
   around_action :track_story_reads, only: [:show], if: -> { @user.present? }
@@ -170,7 +170,7 @@ class StoriesController < ApplicationController
     end
 
     # canonicalize on title_path for html (json is ok with just short_id)
-    if request.format.html? && params[:title].to_s != @story.title_as_slug
+    if !request.format.json? && params[:title].to_s != @story.title_as_slug
       return redirect_to(Routes.title_path(@story))
     end
 
@@ -287,6 +287,7 @@ class StoriesController < ApplicationController
     Vote.vote_thusly_on_story_or_comment_for_user_because(
       -1, @story.id, nil, @user.id, params[:reason]
     )
+    HiddenStory.hide_story_for_user(@story, @user)
 
     render plain: "ok"
   end
